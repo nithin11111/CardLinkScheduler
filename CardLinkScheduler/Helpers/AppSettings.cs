@@ -17,6 +17,7 @@ namespace CardLinkScheduler.Helpers
         public string Localfile { get; set; }
         public string MerchantFileName { get; set; }
         public string TransactionFileName { get; set; }
+        public string AllTransactionFileName { get; set; }
 
         //public Redis Redis { get; set; }
     }
