@@ -1,0 +1,3 @@
+CardLinkScheduler/bin
+CardLinkScheduler/obj
+/.vs

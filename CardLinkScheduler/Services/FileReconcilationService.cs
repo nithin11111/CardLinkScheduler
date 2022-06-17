@@ -33,100 +33,115 @@ namespace CardLinkScheduler.Services
         {
             //ApplyRule();
             IEnumerable<TransactionDetailResponse> transactionDetailResponse = Enumerable.Empty<TransactionDetailResponse>();
-            string merchantOffers = GetMerchantOffers();
-            // var interestData = GetCustomerInterest();
+            // string merchantOffers = GetMerchantOffers();
             var transationFile = JsonConvert.DeserializeObject<List<TransactionDetailResponse>>(GetTransactionFileFromCardLink());
             var rulesList = JsonConvert.DeserializeObject<List<RuleNameResponse>>(GetRuleNames("1"));
-            var merchantOffersResponseList = JsonConvert.DeserializeObject<List<MerchantOffersResponse>>(merchantOffers);
-            var merchantoffers = merchantOffersResponseList.SelectMany(t => t.OfferDetails).ToList();
+            var merchantOffersResponseList = JsonConvert.DeserializeObject<List<AllCustomerInterest>>(GetCustomerInterestOffers());
+            //var merchantoffers = merchantOffersResponseList.Select(t => t.OfferDetails).ToList();
             List<OfferTransactionInitiationRequest> transactionList = new List<OfferTransactionInitiationRequest>();
+            transactionDetailResponse.ToList().Add(new TransactionDetailResponse { TenantId = Guid.Parse("f00c203c-a5d5-4db7-9c24-383f69fa43fd"), TransactionDetails = new TransactionDetail { AMOUNT = "500", DCARD = "test", LOCAL_DATE = "31-Dec-21", LOCAL_TIME = "0", MASK_PAN = "", Merchant_ID = "38R80714", Merchant_Name = "", MERCHANT_TYPE = "7999", REFNUM = "", TERMID = "" } });
             foreach (var item in transationFile)
             {
-                if (merchantoffers.Where(t=>t.merchant_id == item.TransactionDetails.Merchant_ID.TrimEnd()).Count() > 0)
+                foreach (var mol in merchantOffersResponseList.Where(t => t.merchant_id.Contains(item.TransactionDetails.Merchant_ID)))
                 {
-                    var merchantOfferDetail = merchantoffers.Where(t => t.merchant_id == item.TransactionDetails.Merchant_ID.TrimEnd()).FirstOrDefault();
-                    var merchantofferrules = "(;merchant;==;Amazon;||;(;(;location;IN;bangalore,delhi,mangalore;);||;(;billing Amount;==;16;&&;gender;!=;female;);););&&;age;>;16;&&;(;(;card;==;master;&&;(;monthly amount limit;>=;15;&&;monthly amount limit;<=;20;););||;onlynewuser;==;true;)";
-                   // var merchantofferrules = merchantOfferDetail.offer_rule;
+                    // var merchantOfferDetail = merchantOffersResponseList.Where(t => t.merchant_id.Contains(item.TransactionDetails.Merchant_ID)).FirstOrDefault();
+                    //var merchantofferrules = "min_order_amt;>=;1000;&&;max_discount_amt;<=;1000;&&;end_date;<=;2022-02-28;&&;from_date;>=;2022-02-01;&&;to_date;<=;2022-02-28";
+                    var merchantofferrules = mol.offer_details.offer_rule;
                     if (merchantofferrules != null)
                     {
-                        if (merchantofferrules.ToLower().Contains("merchant") && rulesList.Where(t => t.ruleField.ToLower() == "merchant" && t.bankTransactionField.Where(t => t.name.ToLower() == "vendor").Count() > 0).Count() > 0)
+                        if (merchantofferrules.ToLower().Contains("set_budget") && rulesList.Where(t => t.ruleField.ToLower() == "set_budget" && t.bankTransactionField.Where(t => t.name.ToLower() == "set_budget").Count() > 0).Count() > 0)
                         {
                             //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("merchant", "Amazon".ToLower());
+                            merchantofferrules = merchantofferrules.ToLower().Replace("set_budget", "1000".ToLower());
                         }
-                        if (merchantofferrules.ToLower().Contains("age") && rulesList.Where(t => t.ruleField.ToLower() == "age" && t.bankTransactionField.Where(t => t.name.ToLower() == "age").Count() > 0).Count() > 0)
+                        //if (merchantofferrules.ToLower().Contains("discount_type") && rulesList.Where(t => t.ruleField.ToLower() == "discount_type" && t.bankTransactionField.Where(t => t.name.ToLower() == "discount_type").Count() > 0).Count() > 0)
+                        //{
+                        //    //ToDO:transaction value hardcoded
+                        //    merchantofferrules = merchantofferrules.ToLower().Replace("discount_type", "true".ToLower());
+                        //}
+                        //if (merchantofferrules.ToLower().Contains("value") && rulesList.Where(t => t.ruleField.ToLower() == "value" && t.bankTransactionField.Where(t => t.name.ToLower() == "value").Count() > 0).Count() > 0)
+                        //{
+                        //    //ToDO:transaction value hardcoded
+                        //    merchantofferrules = merchantofferrules.ToLower().Replace("value", "true".ToLower());
+                        //}
+
+                        // min order amt 
+                        if (merchantofferrules.ToLower().Contains("min_order_amt") && rulesList.Where(t => t.ruleField.ToLower() == "billing amount" && t.bankTransactionField.Where(t => t.name.ToLower() == "min_order_amt").Count() > 0).Count() > 0)
                         {
                             //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("age", "17");
+                            merchantofferrules = merchantofferrules.ToLower().Replace("min_order_amt", item.TransactionDetails.AMOUNT);
                         }
-                        if (merchantofferrules.ToLower().Contains("location") && rulesList.Where(t => t.ruleField.ToLower() == "location" && t.bankTransactionField.Where(t => t.name.ToLower() == "place").Count() > 0).Count() > 0)
+                        var discountAmount = "";
+                        if (merchantofferrules.ToLower().Contains("max_discount_amt") && rulesList.Where(t => t.ruleField.ToLower() == "max discount amt" && t.bankTransactionField.Where(t => t.name.ToLower() == "max_discount_amt").Count() > 0).Count() > 0)
                         {
+                            if (mol.offer_details.discount_details.discount_type == "2")
+                            {
+                                //ToDO: discount value hardcoded
+                                discountAmount = (Convert.ToDecimal(item.TransactionDetails.AMOUNT) * (Convert.ToDecimal(mol.offer_details.discount_details.value) / 100)).ToString();
+                            }
+                            else
+                            {
+                                //ToDO: discount value hardcoded
+                                discountAmount = (Convert.ToDecimal(item.TransactionDetails.AMOUNT) > 15 ? Convert.ToDecimal(item.TransactionDetails.AMOUNT) - Convert.ToDecimal(mol.offer_details.discount_details.value) : 0).ToString();
+                            }
+
                             //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("location", "mangalore".ToLower());
-                        }
-                        if (merchantofferrules.ToLower().Contains("gender") && rulesList.Where(t => t.ruleField.ToLower() == "gender" && t.bankTransactionField.Where(t => t.name.ToLower() == "gender").Count() > 0).Count() > 0)
-                        {
-                            //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("gender", "male".ToLower());
-                        }
-                        if (merchantofferrules.ToLower().Contains("billing amount") && rulesList.Where(t => t.ruleField.ToLower() == "billing amount" && t.bankTransactionField.Where(t => t.name.ToLower() == "billing amt").Count() > 0).Count() > 0)
-                        {
-                            //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("billing amount", "15");
-                        }
-                        if (merchantofferrules.ToLower().Contains("bank") && rulesList.Where(t => t.ruleField.ToLower() == "bank" && t.bankTransactionField.Where(t => t.name.ToLower() == "bank").Count() > 0).Count() > 0)
-                        {
-                            //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("bank", "BOM".ToLower());
-                        }
-                        if (merchantofferrules.ToLower().Contains("card") && rulesList.Where(t => t.ruleField.ToLower() == "card" && t.bankTransactionField.Where(t => t.name.ToLower() == "card").Count() > 0).Count() > 0)
-                        {
-                            //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("card", "Master".ToLower());
-                        }
-                        if (merchantofferrules.ToLower().Contains("max discount amt") && rulesList.Where(t => t.ruleField.ToLower() == "max discount amt" && t.bankTransactionField.Where(t => t.name.ToLower() == "max discount amt").Count() > 0).Count() > 0)
-                        {
-                            //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("max discount amt", "14".ToLower());
-                        }
-                        if (merchantofferrules.ToLower().Contains("monthly amount limit") && rulesList.Where(t => t.ruleField.ToLower() == "monthly amount limit" && t.bankTransactionField.Where(t => t.name.ToLower() == "monthly amount limit").Count() > 0).Count() > 0)
-                        {
-                            //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("monthly amount limit", "16".ToLower());
-                        }
-                        if (merchantofferrules.ToLower().Contains("monthly transaction limit") && rulesList.Where(t => t.ruleField.ToLower() == "monthly transaction limit" && t.bankTransactionField.Where(t => t.name.ToLower() == "monthly transaction limit").Count() > 0).Count() > 0)
-                        {
-                            //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("monthly transaction limit", "16".ToLower());
-                        }
-                        if (merchantofferrules.ToLower().Contains("onlynewuser") && rulesList.Where(t => t.ruleField.ToLower() == "onlynewuser" && t.bankTransactionField.Where(t => t.name.ToLower() == "onlynewuser").Count() > 0).Count() > 0)
-                        {
-                            //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("onlynewuser", "true".ToLower());
+                            merchantofferrules = merchantofferrules.ToLower().Replace("max_discount_amt", discountAmount);
                         }
 
+                        if (merchantofferrules.ToLower().Contains("offer_availability") && rulesList.Where(t => t.ruleField.ToLower() == "offer_availability" && t.bankTransactionField.Where(t => t.name.ToLower() == "offer_availability").Count() > 0).Count() > 0)
+                        {
+                            //ToDO:transaction value hardcoded
+                            merchantofferrules = merchantofferrules.ToLower().Replace("offer_availability", "3".ToLower());
+                        }
+
+                        if (merchantofferrules.ToLower().Contains("end_date") && rulesList.Where(t => t.ruleField.ToLower() == "end_date" && t.bankTransactionField.Where(t => t.name.ToLower() == "end_date").Count() > 0).Count() > 0)
+                        {
+                            //ToDO:transaction value hardcoded
+                            merchantofferrules = merchantofferrules.ToLower().Replace("end_date", DateTime.Now.ToString());
+                        }
+                        if (merchantofferrules.ToLower().Contains("from_date") && rulesList.Where(t => t.ruleField.ToLower() == "from date" && t.bankTransactionField.Where(t => t.name.ToLower() == "from_date").Count() > 0).Count() > 0)
+                        {
+                            //ToDO:transaction value hardcoded
+                            merchantofferrules = merchantofferrules.ToLower().Replace("from_date", DateTime.Now.ToString());
+                        }
+
+                        if (merchantofferrules.ToLower().Contains("to_date") && rulesList.Where(t => t.ruleField.ToLower() == "to date" && t.bankTransactionField.Where(t => t.name.ToLower() == "to_date").Count() > 0).Count() > 0)
+                        {
+                            //ToDO:transaction value hardcoded
+                            merchantofferrules = merchantofferrules.ToLower().Replace("to_date", DateTime.Now.ToString());
+                        }
+
+                        if (merchantofferrules.ToLower().Contains("offer_status") && rulesList.Where(t => t.ruleField.ToLower() == "offer_status" && t.bankTransactionField.Where(t => t.name.ToLower() == "offer_status").Count() > 0).Count() > 0)
+                        {
+                            //ToDO:transaction value hardcoded
+                            merchantofferrules = merchantofferrules.ToLower().Replace("offer_status", "11".ToLower());
+                        }
                         string po = InfixToPostfix(merchantofferrules);
 
                         bool offerValid = ValidateRules(po);
                         if (offerValid)
                         {
-                            if (merchantOfferDetail.offer_type == "percentage")
-                            {
-                                //ToDO: discount value hardcoded
-                                item.TransactionDetails.AMOUNT = (Convert.ToDecimal(item.TransactionDetails.AMOUNT) % Convert.ToDecimal(merchantOfferDetail.offer_value)).ToString();
-                            }
-                            else
-                            {
-                                //ToDO: discount value hardcoded
-                                item.TransactionDetails.AMOUNT = (Convert.ToDecimal(item.TransactionDetails.AMOUNT) > 15 ? Convert.ToDecimal(item.TransactionDetails.AMOUNT) - Convert.ToDecimal(merchantOfferDetail.offer_value) : 0).ToString();
-                            }
                             OfferTransactionInitiationRequest otir = new OfferTransactionInitiationRequest
                             {
-                                OfferId = merchantOffersResponseList.Where(t => t.OfferDetails.Where(d => d.merchant_id == item.TransactionDetails.Merchant_ID.TrimEnd()).Count() > 0).FirstOrDefault().Id,
-                                amount = item.TransactionDetails.AMOUNT,
-                                offer_trnasction_details = new offerTransactiondetails { currency = "rs", description = "max disc" },
-                                TenantId = item.TenantId,
-                                Timestamp = DateTime.Now
+                                offer_id = (Guid)mol.id,
+                                offer_transaction_details = new offerTransactiondetails
+                                {
+                                    discount_amount = discountAmount,
+                                    //cheg_comission_amount = (Convert.ToDecimal(item.TransactionDetails.AMOUNT) % Convert.ToDecimal(mol.business_details.commission)).ToString(),
+                                    original_ammount = item.TransactionDetails.AMOUNT,
+                                    Cheg_commission = mol.business_details.commission,
+                                    merchantId = item.TransactionDetails.Merchant_ID,
+                                    cheg_id = mol.cheg_id,
+                                    bank_local_date = item.TransactionDetails.LOCAL_DATE,
+                                    bank_local_time = item.TransactionDetails.LOCAL_TIME,
+                                    merchant_name = item.TransactionDetails.Merchant_Name,
+                                    merchant_type = item.TransactionDetails.MERCHANT_TYPE,
+                                    ref_number = item.TransactionDetails.REFNUM,
+                                    terminal_id = item.TransactionDetails.TERMID
+                                },
+                                tenant_id = item.TenantId,
+                                status = "pending"
                             };
                             transactionList.Add(otir);
                         }
@@ -135,18 +150,17 @@ namespace CardLinkScheduler.Services
             }
             SaveTransactionInitiation(transactionList);
         }
-        public string GetCustomerInterest()
+        public string GetCustomerInterestOffers()
         {
             string result = string.Empty;
             try
             {
                 var jwtaccesstoken = _tokenService.generateJwtTokenOnBankId();
-                var client = new RestClient(_settings.Value.CardLinkAPI + "Merchant/GetCustomerInterest");
+                var client = new RestClient(_settings.Value.CardLinkAPI + "Merchant/GetCustomerInterestOffers");
                 client.Timeout = -1;
                 var request = new RestRequest(Method.GET);
                 request.AddHeader("Authorization", "Bearer " + jwtaccesstoken);
                 request.AddHeader("Content-Type", "application/json");
-                request.AddParameter("tenantId", "3ce2c869-3bce-4c19-b450-866142580760");
                 IRestResponse response = client.Execute(request);
                 result = response.Content;
             }
@@ -171,7 +185,7 @@ namespace CardLinkScheduler.Services
             try
             {
                 var jwtaccesstoken = _tokenService.generateJwtTokenOnBankId();
-                var client = new RestClient(_settings.Value.CardLinkAPI + "Merchant/GetRuleNames");
+                var client = new RestClient(_settings.Value.CardLinkAPI + "Reconcilation/GetRuleNames");
                 client.Timeout = -1;
                 var request = new RestRequest(Method.GET);
                 request.AddHeader("Authorization", "Bearer " + jwtaccesstoken);
@@ -201,15 +215,15 @@ namespace CardLinkScheduler.Services
             try
             {
                 var jwtaccesstoken = _tokenService.generateJwtTokenOnBankId();
-                var client = new RestClient(_settings.Value.CardLinkAPI + "Merchant/MerchantOffers");
+                var client = new RestClient(_settings.Value.CardLinkAPI + "Offers/MerchantOffers");
                 client.Timeout = -1;
                 var request = new RestRequest(Method.POST);
                 request.AddHeader("Authorization", "Bearer " + jwtaccesstoken);
                 request.AddHeader("Content-Type", "application/json");
-                JObject jObjectbody = new JObject();
-                jObjectbody.Add("MerchantId", "0");
-                string json = JsonConvert.SerializeObject(jObjectbody);
-                request.AddParameter("application/json", json, ParameterType.RequestBody);
+                //JObject jObjectbody = new JObject();
+                //jObjectbody.Add("MerchantId", "0");
+                //string json = JsonConvert.SerializeObject(jObjectbody);
+                //request.AddParameter("application/json", json, ParameterType.RequestBody);
                 IRestResponse response = client.Execute(request);
                 result = response.Content;
             }
@@ -257,55 +271,55 @@ namespace CardLinkScheduler.Services
             return result;
         }
 
-    //    public void ApplyRule()
-    //    {
-    //        try
-    //        {
-    //            string xml = "<rule>"
-    //    //   "<allowedmerchant>"
-    //    + "<Merchant>"
-    //   + "<Name>amazon </Name>"
-    //  + "<Operand> Equals </Operand>"
-    //  + "</Merchant>"
-    //      + "<Merchant>"
-    //  + "<Name>amazon</Name>"
-    // + "<Operand>NotEquals</Operand>"
-    // + "</Merchant>"
-    ////+ "</allowedmerchant>"
-    //+ "</rule>";
-    //            XmlDocument xmlDoc = new XmlDocument();
-    //            xmlDoc.LoadXml(xml);
-    //            string Json = JsonConvert.SerializeXmlNode(xmlDoc);
-    //            var users = JObject.Parse(Json).SelectToken("rule").ToString();
-    //            var rulesRequest = JsonConvert.DeserializeObject<Rules>(users);
-                
+        //    public void ApplyRule()
+        //    {
+        //        try
+        //        {
+        //            string xml = "<rule>"
+        //    //   "<allowedmerchant>"
+        //    + "<Merchant>"
+        //   + "<Name>amazon </Name>"
+        //  + "<Operand> Equals </Operand>"
+        //  + "</Merchant>"
+        //      + "<Merchant>"
+        //  + "<Name>amazon</Name>"
+        // + "<Operand>NotEquals</Operand>"
+        // + "</Merchant>"
+        ////+ "</allowedmerchant>"
+        //+ "</rule>";
+        //            XmlDocument xmlDoc = new XmlDocument();
+        //            xmlDoc.LoadXml(xml);
+        //            string Json = JsonConvert.SerializeXmlNode(xmlDoc);
+        //            var users = JObject.Parse(Json).SelectToken("rule").ToString();
+        //            var rulesRequest = JsonConvert.DeserializeObject<Rules>(users);
 
-    //            //RulesRequest rulesRequest = new RulesRequest
-    //            //{
-    //            //    AllowedMerchant = Json.
-    //            //    {
-    //            //        MerchantName = "test",
-    //            //        Operand = "test"
-    //            //    }.ToList();
-    //            //};
-    //            //if(xmlDoc.GetElementsByTagName("rule").Count > 1)
-    //            //{
-    //            //    XmlNodeList xmlnode = xmlDoc.GetElementsByTagName("rule");
-    //            //    for (int i = 0; i <= xmlnode.Count - 1; i++)
-    //            //    {
-    //            //       if(xmlnode[i].ChildNodes.Item(0).Name == "allowedmerchant")
-    //            //        {
 
-    //            //        }
-    //            //    }
+        //            //RulesRequest rulesRequest = new RulesRequest
+        //            //{
+        //            //    AllowedMerchant = Json.
+        //            //    {
+        //            //        MerchantName = "test",
+        //            //        Operand = "test"
+        //            //    }.ToList();
+        //            //};
+        //            //if(xmlDoc.GetElementsByTagName("rule").Count > 1)
+        //            //{
+        //            //    XmlNodeList xmlnode = xmlDoc.GetElementsByTagName("rule");
+        //            //    for (int i = 0; i <= xmlnode.Count - 1; i++)
+        //            //    {
+        //            //       if(xmlnode[i].ChildNodes.Item(0).Name == "allowedmerchant")
+        //            //        {
 
-    //            //    }
-    //            //XmlNodeList xmlNodeList = xmlDoc.SelectNodes("/info/collage");
+        //            //        }
+        //            //    }
 
-    //        }
-    //        catch(Exception ex)
-    //        { }
-    //    }
+        //            //    }
+        //            //XmlNodeList xmlNodeList = xmlDoc.SelectNodes("/info/collage");
+
+        //        }
+        //        catch(Exception ex)
+        //        { }
+        //    }
 
         public bool ValidateRules(string s)
         {
@@ -353,7 +367,7 @@ namespace CardLinkScheduler.Services
                 }
                 else if (c.Equals("&&"))
                 {
-                    string sa =Convert.ToString(i.Pop());
+                    string sa = Convert.ToString(i.Pop());
                     string sb = Convert.ToString(i.Pop());
                     ans = Convert.ToBoolean(sa) && Convert.ToBoolean(sb);
                     i.Push(ans);
@@ -383,28 +397,59 @@ namespace CardLinkScheduler.Services
                 {
                     string sa = Convert.ToString(i.Pop());
                     string sb = Convert.ToString(i.Pop());
-                    ans = Convert.ToInt32(sb) < Convert.ToInt32(sa);
+                    // ans = Convert.ToInt32(sb) < Convert.ToInt32(sa);
+                    try
+                    {
+                        ans = Convert.ToInt32(sb) < Convert.ToInt32(sa);
+                    }
+                    catch
+                    {
+                        ans = Convert.ToDateTime(sb) < Convert.ToDateTime(sa);
+                    }
                     i.Push(ans);
                 }
                 else if (c.Equals(">"))
                 {
                     string sa = Convert.ToString(i.Pop());
                     string sb = Convert.ToString(i.Pop());
-                    ans = Convert.ToInt32(sb) > Convert.ToInt32(sa);
+                    //ans = Convert.ToInt32(sb) > Convert.ToInt32(sa);
+                    try
+                    {
+                        ans = Convert.ToInt32(sb) > Convert.ToInt32(sa);
+                    }
+                    catch
+                    {
+                        ans = Convert.ToDateTime(sb) > Convert.ToDateTime(sa);
+                    }
                     i.Push(ans);
                 }
                 else if (c.Equals("<="))
                 {
                     string sa = Convert.ToString(i.Pop());
                     string sb = Convert.ToString(i.Pop());
-                    ans = Convert.ToInt32(sb) <= Convert.ToInt32(sa);
+                    //ans = Convert.ToInt32(sb) <= Convert.ToInt32(sa);
+                    try
+                    {
+                        ans = Convert.ToInt32(sb) <= Convert.ToInt32(sa);
+                    }
+                    catch
+                    {
+                        ans = Convert.ToDateTime(sb) <= Convert.ToDateTime(sa);
+                    }
                     i.Push(ans);
                 }
                 else if (c.Equals(">="))
                 {
                     string sa = Convert.ToString(i.Pop());
                     string sb = Convert.ToString(i.Pop());
-                    ans = Convert.ToInt32(sb) >= Convert.ToInt32(sa);
+                    try
+                    {
+                        ans = Convert.ToInt32(sb) >= Convert.ToInt32(sa);
+                    }
+                    catch
+                    {
+                        ans = Convert.ToDateTime(sb) >= Convert.ToDateTime(sa);
+                    }
                     i.Push(ans);
                 }
                 else if (c.Equals("in"))
@@ -465,7 +510,7 @@ namespace CardLinkScheduler.Services
                 }
                 else if (ex == ")")
                 {
-                    while (S.Count != 0  && S.Peek() != "(") //s.empty()
+                    while (S.Count != 0 && S.Peek() != "(") //s.empty()
                     {
                         postfix += ';' + S.Peek();
                         S.Pop();
@@ -496,7 +541,7 @@ namespace CardLinkScheduler.Services
                 S.Pop();
             }
 
-            return postfix.StartsWith(';') ? postfix.Remove(0,1): postfix;
+            return postfix.StartsWith(';') ? postfix.Remove(0, 1) : postfix;
         }
 
         // Function to verify whether a character is english letter or numeric digit. 

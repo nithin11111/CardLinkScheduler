@@ -60,7 +60,7 @@ namespace CardLinkScheduler.Services
                 }
             };
             _commonService.InsertAuditLog(objaudit);
-            _merchantFileService.SendMerchantFileToBank().Wait();
+            //_merchantFileService.SendMerchantFileToBank().Wait();
             return Task.CompletedTask;
         }
 

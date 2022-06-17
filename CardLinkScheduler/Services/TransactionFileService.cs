@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -36,10 +37,10 @@ namespace CardLinkScheduler.Services
             string result = string.Empty;
             try
             {
-                string FilePath = await GetFilefromBank().ConfigureAwait(false);
-                if (!string.IsNullOrEmpty(FilePath))
+                List<string> FilePath = await GetFilefromBank().ConfigureAwait(false);
+                foreach(var file in FilePath)
                 {
-                    result = FileUploadProcess(FilePath);
+                    result = FileUploadProcess(file);
                 }
             }
             catch (Exception ex)
@@ -57,9 +58,11 @@ namespace CardLinkScheduler.Services
             return result;
         }
 
-        public async Task<string> GetFilefromBank()
+        public async Task<List<string>> GetFilefromBank()
         {
-            string localpath = string.Empty;
+            List<string> localpathList = new List<string>();
+            string localpath = null;
+            int i = 0;
             try
             {
                 WebClient client = new WebClient();
@@ -74,12 +77,14 @@ namespace CardLinkScheduler.Services
                 //code to get list of files in remote directory
                 DirectoryInfo info = new DirectoryInfo(path);
                 FileInfo[] files = info.GetFiles("*.*", SearchOption.AllDirectories);
-                foreach (var item in files.Where(t => t.Name == $"{_settings.Value.TransactionFileName}_{DateTime.Now.ToString("MM/dd/yyyy").Replace("-", "").Replace("/", "").Replace("/", "").Replace(":", "")}.csv"))
+                foreach (var item in files.Where(t => t.Name == $"{_settings.Value.TransactionFileName}_{DateTime.Now.ToString("MM/dd/yyyy").Replace("-", "").Replace("/", "").Replace("/", "").Replace(":", "")}.csv" || t.Name == $"{_settings.Value.AllTransactionFileName}_{DateTime.Now.AddDays(-1).ToString("dd/MMM/yyyy")}.csv"))
                 {
                     string filename = item.ToString();
                     string serverpath = path + "\\" + Path.GetFileName(filename);// filename;
                     localpath = _settings.Value.Localfile + Path.GetFileName(filename);// filename;
                     await client.DownloadFileTaskAsync(new Uri(serverpath), localpath).ConfigureAwait(false);
+                    i++;
+                    localpathList.Add(localpath);
                 }
                 //localpathContent = System.IO.File.ReadAllText(localpath);
                 _commonService.MoveFile(_settings.Value.Inbox);
@@ -96,7 +101,7 @@ namespace CardLinkScheduler.Services
                 };
                 _commonService.InsertErrorLog(errorLogRequest);
             }
-            return localpath;
+            return localpathList;
         }
 
         public string FileUploadProcess(string filePath)
@@ -114,6 +119,7 @@ namespace CardLinkScheduler.Services
                 jObjectbody.Add("filePath", filePath);
                 jObjectbody.Add("fileId", "1");
                 jObjectbody.Add("bankId", "BOM");
+                jObjectbody.Add("filterOption", filePath.Contains(_settings.Value.AllTransactionFileName) ? "all":"");
                 string json = JsonConvert.SerializeObject(jObjectbody);
                 request.AddParameter("application/json", json, ParameterType.RequestBody);
                 IRestResponse response = client.Execute(request);
@@ -133,6 +139,73 @@ namespace CardLinkScheduler.Services
                 _commonService.InsertErrorLog(errorLogRequest);
             }
             return result;
+        }
+
+        public string getvirtualid()
+        {
+            string result = string.Empty;
+            try
+            {
+                var jwtaccesstoken = _tokenService.generateJwtTokenOnBankId();
+                var client = new RestClient("https://localhost:44303/" + "ValidateMobile/ValidateMobileNo");
+                client.Timeout = -1;
+                var request = new RestRequest(Method.POST);
+                request.AddHeader("Authorization", "Bearer " + jwtaccesstoken);
+                request.AddHeader("Content-Type", "application/json");
+                // JObject jObjectbody = new JObject();
+                //jObjectbody.Add("filePath", filePath);
+                //jObjectbody.Add("fileId", "1");
+                //jObjectbody.Add("bankId", "BOM");
+                IBBankRequest iBBankRequest = new IBBankRequest();
+                string ibRequest = "{\"mobileNo\":\"" + "919423261763" + "\",\"flag\":\"" + "false" + "\",\"requestId\":\"" + "1423432" + "\",\"chksum\":\"" + "13456" + "\",\"reqTimestamp\":\"" + Convert.ToDateTime("2019-09-17").ToShortDateString() + "\"}";
+                string requestStringEN = EncryptStringFromBytes(ibRequest, "bbcdefghijklmnoq", "bbcdefghijklmnoq");
+                iBBankRequest.request = requestStringEN;
+                string json = JsonConvert.SerializeObject(iBBankRequest);
+                request.AddParameter("application/json", json, ParameterType.RequestBody);
+                IRestResponse response = client.Execute(request);
+                result = response.Content;
+            }
+            catch (Exception ex)
+            {
+                ErrorLogRequest errorLogRequest = new ErrorLogRequest
+                {
+                    ErrorMsg = ex.Message,
+                    FullMsg = ex.StackTrace,
+                    MethodName = "FileUploadProcess",
+                    ErrorLineNo = new StackTrace(ex, true).GetFrame(0).GetFileLineNumber().ToString(),
+                    ExceptionType = ex.GetType().ToString()
+                };
+                _commonService.InsertErrorLog(errorLogRequest);
+            }
+            return result;
+        }
+        public class IBBankRequest
+        {
+            public string request { get; set; }
+        }
+        private static AesManaged CreateAes(string encryptionKey, string vectorkey)
+        {
+            var aes = new AesManaged();
+            aes.Key = System.Text.Encoding.UTF8.GetBytes(encryptionKey); //UTF8-Encoding
+            aes.IV = System.Text.Encoding.UTF8.GetBytes(vectorkey);//UT8-Encoding
+            return aes;
+        }
+
+        public static string EncryptStringFromBytes(string text, string encryptionKey, string vectorkey)
+        {
+            using (AesManaged aes = CreateAes(encryptionKey, vectorkey))
+            {
+                ICryptoTransform encryptor = aes.CreateEncryptor();
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    using (CryptoStream cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                    {
+                        using (StreamWriter sw = new StreamWriter(cs))
+                            sw.Write(text);
+                        return Convert.ToBase64String(ms.ToArray());
+                    }
+                }
+            }
         }
     }
 }

@@ -44,6 +44,7 @@ namespace CardLinkScheduler.Services
             _commonService.InsertAuditLog(objaudit);
             // _cardLinkFileService.SendMerchantFileToBank();
             _transactionFileService.UploadFileToCardlinkDB().Wait();
+            //_transactionFileService.getvirtualid();
             return base.StartAsync(cancellationToken);
         }
 
@@ -68,7 +69,7 @@ namespace CardLinkScheduler.Services
             };
             _commonService.InsertAuditLog(objaudit);
             // _cardLinkFileService.SendTransactionFileToCardLink().Wait();
-            _transactionFileService.UploadFileToCardlinkDB().Wait();
+            //_transactionFileService.UploadFileToCardlinkDB().Wait();
             return Task.CompletedTask;
         }
 

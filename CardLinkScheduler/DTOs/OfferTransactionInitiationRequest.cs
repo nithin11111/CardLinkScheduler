@@ -7,18 +7,25 @@ namespace CardLinkScheduler.DTOs
 {
     public sealed class OfferTransactionInitiationRequest
     {
-        public DateTime Timestamp { get; set; }
-        public offerTransactiondetails offer_trnasction_details { get; set; }
-        public string amount { get; set; }
-        public Guid OfferId { get; set; }
-        public Guid TenantId { get; set; }
+        public Guid offer_id { get; set; }
+        public Guid tenant_id { get; set; }
+        public offerTransactiondetails offer_transaction_details { get; set; }
+        public string status { get; set; }
     }
-
     public sealed class offerTransactiondetails
     {
-        public string amount { get; set; }
-        public string currency { get; set; }
-        public string description { get; set; }
+        public string discount_amount { get; set; }
+        public string original_ammount { get; set; }
+        public string cheg_comission_amount { get; set; }
+        public string merchantId { get; set; }
+        public string Cheg_commission { get; set; }
+        public string cheg_id { get; set; }
+        public string ref_number { get; set; }
+        public string terminal_id { get; set; }
+        public string bank_local_date { get; set; }
+        public string bank_local_time { get; set; }
+        public string merchant_type { get; set; }
+        public string merchant_name { get; set; }
     }
 }
 
