@@ -14,6 +14,7 @@ namespace CardLinkScheduler.DTOs
         public BusinessDetails business_details { get; set; }
         public List<string> merchant_id { get; set; }
         public string cheg_id { get; set; }
+        public string bankuser_id { get; set; }
     }
 
     public class BusinessDetails

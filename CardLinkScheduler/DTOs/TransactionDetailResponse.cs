@@ -9,6 +9,7 @@ namespace CardLinkScheduler.DTOs
     {
         public TransactionDetail TransactionDetails { get; set; }
         public Guid TenantId { get; set; }
+        public string BankName { get; set; }
     }
 
     public class TransactionDetail
@@ -23,6 +24,7 @@ namespace CardLinkScheduler.DTOs
         public string Merchant_ID { get; set; }
         public string MERCHANT_TYPE { get; set; }
         public string Merchant_Name { get; set; }
+        public string VirtualId { get; set; }
     }
 }
 

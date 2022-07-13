@@ -40,7 +40,7 @@ namespace CardLinkScheduler.Services
                 List<string> FilePath = await GetFilefromBank().ConfigureAwait(false);
                 foreach(var file in FilePath)
                 {
-                    result = FileUploadProcess(file);
+                    result = FileUploadProcess(file, _settings.Value.BankName);
                 }
             }
             catch (Exception ex)
@@ -104,7 +104,7 @@ namespace CardLinkScheduler.Services
             return localpathList;
         }
 
-        public string FileUploadProcess(string filePath)
+        public string FileUploadProcess(string filePath,string bankName)
         {
             string result = string.Empty;
             try
@@ -118,7 +118,7 @@ namespace CardLinkScheduler.Services
                 JObject jObjectbody = new JObject();
                 jObjectbody.Add("filePath", filePath);
                 jObjectbody.Add("fileId", "1");
-                jObjectbody.Add("bankId", "BOM");
+                jObjectbody.Add("bankName", bankName);
                 jObjectbody.Add("filterOption", filePath.Contains(_settings.Value.AllTransactionFileName) ? "all":"");
                 string json = JsonConvert.SerializeObject(jObjectbody);
                 request.AddParameter("application/json", json, ParameterType.RequestBody);

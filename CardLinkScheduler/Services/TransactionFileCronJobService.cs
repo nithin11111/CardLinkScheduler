@@ -68,8 +68,8 @@ namespace CardLinkScheduler.Services
                 }
             };
             _commonService.InsertAuditLog(objaudit);
-            // _cardLinkFileService.SendTransactionFileToCardLink().Wait();
-            _transactionFileService.UploadFileToCardlinkDB().Wait();
+            //_cardLinkFileService.SendTransactionFileToCardLink().Wait();
+         //   _transactionFileService.UploadFileToCardlinkDB().Wait();
             return Task.CompletedTask;
         }
 

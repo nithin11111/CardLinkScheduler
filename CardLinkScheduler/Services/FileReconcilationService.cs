@@ -35,35 +35,35 @@ namespace CardLinkScheduler.Services
             IEnumerable<TransactionDetailResponse> transactionDetailResponse = Enumerable.Empty<TransactionDetailResponse>();
             // string merchantOffers = GetMerchantOffers();
             var transationFile = JsonConvert.DeserializeObject<List<TransactionDetailResponse>>(GetTransactionFileFromCardLink());
-            var rulesList = JsonConvert.DeserializeObject<List<RuleNameResponse>>(GetRuleNames("1"));
+            var rulesList = JsonConvert.DeserializeObject<List<RuleNameResponse>>(GetRuleNames());
             var merchantOffersResponseList = JsonConvert.DeserializeObject<List<AllCustomerInterest>>(GetCustomerInterestOffers());
             //var merchantoffers = merchantOffersResponseList.Select(t => t.OfferDetails).ToList();
             List<OfferTransactionInitiationRequest> transactionList = new List<OfferTransactionInitiationRequest>();
-            transactionDetailResponse.ToList().Add(new TransactionDetailResponse { TenantId = Guid.Parse("f00c203c-a5d5-4db7-9c24-383f69fa43fd"), TransactionDetails = new TransactionDetail { AMOUNT = "500", DCARD = "test", LOCAL_DATE = "31-Dec-21", LOCAL_TIME = "0", MASK_PAN = "", Merchant_ID = "38R80714", Merchant_Name = "", MERCHANT_TYPE = "7999", REFNUM = "", TERMID = "" } });
+            //transactionDetailResponse.ToList().Add(new TransactionDetailResponse { TenantId = Guid.Parse("f00c203c-a5d5-4db7-9c24-383f69fa43fd"), TransactionDetails = new TransactionDetail { AMOUNT = "500", DCARD = "test", LOCAL_DATE = "31-Dec-21", LOCAL_TIME = "0", MASK_PAN = "", Merchant_ID = "38R80714", Merchant_Name = "", MERCHANT_TYPE = "7999", REFNUM = "", TERMID = "" } });
             foreach (var item in transationFile)
             {
-                foreach (var mol in merchantOffersResponseList.Where(t => t.merchant_id.Contains(item.TransactionDetails.Merchant_ID)))
+                foreach (var mol in merchantOffersResponseList.Where(t => t.merchant_id.Contains(item.TransactionDetails.Merchant_ID) && t.bankuser_id == item.TransactionDetails.VirtualId))
                 {
                     // var merchantOfferDetail = merchantOffersResponseList.Where(t => t.merchant_id.Contains(item.TransactionDetails.Merchant_ID)).FirstOrDefault();
                     //var merchantofferrules = "min_order_amt;>=;1000;&&;max_discount_amt;<=;1000;&&;end_date;<=;2022-02-28;&&;from_date;>=;2022-02-01;&&;to_date;<=;2022-02-28";
                     var merchantofferrules = mol.offer_details.offer_rule;
                     if (merchantofferrules != null)
                     {
-                        if (merchantofferrules.ToLower().Contains("set_budget") && rulesList.Where(t => t.ruleField.ToLower() == "set_budget" && t.bankTransactionField.Where(t => t.name.ToLower() == "set_budget").Count() > 0).Count() > 0)
-                        {
-                            //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("set_budget", "true".ToLower());
-                        }
+                        //if (merchantofferrules.ToLower().Contains("set_budget") && rulesList.Where(t => t.ruleField.ToLower() == "set_budget" && t.bankTransactionField.Where(t => t.name.ToLower() == "set_budget").Count() > 0).Count() > 0)
+                        //{
+                        //    //ToDO:transaction value hardcoded
+                        //    merchantofferrules = merchantofferrules.ToLower().Replace("set_budget", "true".ToLower());
+                        //}
                         //if (merchantofferrules.ToLower().Contains("discount_type") && rulesList.Where(t => t.ruleField.ToLower() == "discount_type" && t.bankTransactionField.Where(t => t.name.ToLower() == "discount_type").Count() > 0).Count() > 0)
                         //{
                         //    //ToDO:transaction value hardcoded
                         //    merchantofferrules = merchantofferrules.ToLower().Replace("discount_type", "true".ToLower());
                         //}
-                        //if (merchantofferrules.ToLower().Contains("value") && rulesList.Where(t => t.ruleField.ToLower() == "value" && t.bankTransactionField.Where(t => t.name.ToLower() == "value").Count() > 0).Count() > 0)
-                        //{
-                        //    //ToDO:transaction value hardcoded
-                        //    merchantofferrules = merchantofferrules.ToLower().Replace("value", "true".ToLower());
-                        //}
+                        if (merchantofferrules.ToLower().Contains("publisher") && rulesList.Where(t => t.ruleField.ToLower() == "publisher" && t.bankTransactionField.Where(t => t.name.ToLower() == "publisher").Count() > 0).Count() > 0)
+                        {
+                            //ToDO:transaction value hardcoded
+                            merchantofferrules = merchantofferrules.ToLower().Replace("publisher", item.BankName);
+                        }
 
                         // min order amt 
                         if (merchantofferrules.ToLower().Contains("min_order_amt") && rulesList.Where(t => t.ruleField.ToLower() == "billing amount" && t.bankTransactionField.Where(t => t.name.ToLower() == "min_order_amt").Count() > 0).Count() > 0)
@@ -89,36 +89,36 @@ namespace CardLinkScheduler.Services
                             merchantofferrules = merchantofferrules.ToLower().Replace("max_discount_amt", discountAmount);
                         }
 
-                        if (merchantofferrules.ToLower().Contains("offer_availability") && rulesList.Where(t => t.ruleField.ToLower() == "offer_availability" && t.bankTransactionField.Where(t => t.name.ToLower() == "offer_availability").Count() > 0).Count() > 0)
+                        if (merchantofferrules.ToLower().Contains("offer_availability") && rulesList.Where(t => t.ruleField.ToLower() == "offeravailability" && t.bankTransactionField.Where(t => t.name.ToLower() == "offeravailability").Count() > 0).Count() > 0)
                         {
                             //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("offer_availability", "true".ToLower());
+                            merchantofferrules = merchantofferrules.ToLower().Replace("offer_availability", "both,offline");
                         }
 
                         if (merchantofferrules.ToLower().Contains("end_date") && rulesList.Where(t => t.ruleField.ToLower() == "end_date" && t.bankTransactionField.Where(t => t.name.ToLower() == "end_date").Count() > 0).Count() > 0)
                         {
                             //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("end_date", DateTime.Now.ToString());
+                            merchantofferrules = merchantofferrules.ToLower().Replace("end_date", Convert.ToDateTime(item.TransactionDetails.LOCAL_DATE).ToString("yyyy-MM-dd"));
                         }
                         if (merchantofferrules.ToLower().Contains("from_date") && rulesList.Where(t => t.ruleField.ToLower() == "from date" && t.bankTransactionField.Where(t => t.name.ToLower() == "from_date").Count() > 0).Count() > 0)
                         {
                             //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("from_date", DateTime.Now.ToString());
+                            merchantofferrules = merchantofferrules.ToLower().Replace("from_date", Convert.ToDateTime(item.TransactionDetails.LOCAL_DATE).ToString("yyyy-MM-dd"));
                         }
 
                         if (merchantofferrules.ToLower().Contains("to_date") && rulesList.Where(t => t.ruleField.ToLower() == "to date" && t.bankTransactionField.Where(t => t.name.ToLower() == "to_date").Count() > 0).Count() > 0)
                         {
                             //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("to_date", DateTime.Now.ToString());
+                            merchantofferrules = merchantofferrules.ToLower().Replace("to_date",Convert.ToDateTime(item.TransactionDetails.LOCAL_DATE).ToString("yyyy-MM-dd"));
                         }
-
-                        if (merchantofferrules.ToLower().Contains("offer_status") && rulesList.Where(t => t.ruleField.ToLower() == "offer_status" && t.bankTransactionField.Where(t => t.name.ToLower() == "offer_status").Count() > 0).Count() > 0)
+                        if (merchantofferrules.ToLower().Contains("offer_status") && rulesList.Where(t => t.ruleField.ToLower() == "offerstatus" && t.bankTransactionField.Where(t => t.name.ToLower() == "offerstatus").Count() > 0).Count() > 0)
                         {
                             //ToDO:transaction value hardcoded
-                            merchantofferrules = merchantofferrules.ToLower().Replace("offer_status", "true".ToLower());
+                            merchantofferrules = merchantofferrules.ToLower().Replace("offer_status", "published".ToLower());
                         }
-                        string po = InfixToPostfix(merchantofferrules);
+                        //merchantofferrules = "500;>=;6777;&&;85;<=;4567;&&;offline;in;online,offline;&&;bom;in;all;&&;22-06-2022 17:51:31;<=;2022-01-31;&&;22-06-2022 17:52:09;>=;2022-01-31;&&;22-06-2022 17:52:14;<=;2022-01-31;&&;published;==;published";
 
+                        string po = InfixToPostfix(merchantofferrules);
                         bool offerValid = ValidateRules(po);
                         if (offerValid)
                         {
@@ -128,11 +128,12 @@ namespace CardLinkScheduler.Services
                                 offer_transaction_details = new offerTransactiondetails
                                 {
                                     discount_amount = discountAmount,
-                                    //cheg_comission_amount = (Convert.ToDecimal(item.TransactionDetails.AMOUNT) % Convert.ToDecimal(mol.business_details.commission)).ToString(),
-                                    original_ammount = item.TransactionDetails.AMOUNT,
+                                    cheg_comission_amount = String.Format("{0:0.00}", Convert.ToDecimal(discountAmount) * Convert.ToDecimal(mol.business_details.commission)/100),
+                                    original_amount = item.TransactionDetails.AMOUNT,
                                     Cheg_commission = mol.business_details.commission,
                                     merchantId = item.TransactionDetails.Merchant_ID,
                                     cheg_id = mol.cheg_id,
+                                    bankuser_id = mol.bankuser_id,
                                     bank_local_date = item.TransactionDetails.LOCAL_DATE,
                                     bank_local_time = item.TransactionDetails.LOCAL_TIME,
                                     merchant_name = item.TransactionDetails.Merchant_Name,
@@ -141,7 +142,8 @@ namespace CardLinkScheduler.Services
                                     terminal_id = item.TransactionDetails.TERMID
                                 },
                                 tenant_id = item.TenantId,
-                                status = "pending"
+                                status = "pending",
+                                bankName = item.BankName
                             };
                             transactionList.Add(otir);
                         }
@@ -179,7 +181,7 @@ namespace CardLinkScheduler.Services
             return result;
         }
 
-        public string GetRuleNames(string bankId)
+        public string GetRuleNames()
         {
             string result = string.Empty;
             try
@@ -190,7 +192,7 @@ namespace CardLinkScheduler.Services
                 var request = new RestRequest(Method.GET);
                 request.AddHeader("Authorization", "Bearer " + jwtaccesstoken);
                 request.AddHeader("Content-Type", "application/json");
-                request.AddParameter("bankId", bankId);
+                //request.AddParameter("bankName", bankName);
                 IRestResponse response = client.Execute(request);
                 result = response.Content;
             }
@@ -460,7 +462,7 @@ namespace CardLinkScheduler.Services
                     ans = false;
                     for (int k = 0; k < saList.Length; k++)
                     {
-                        ans = k == 0 ? (sb == saList[k]) : (ans || (sb == saList[k]));
+                        ans = k == 0 ? (sb == saList[k] || saList[k].ToLower() =="all") : (ans || (sb == saList[k] || saList[k].ToLower() == "all"));
                     }
                     i.Push(ans);
                 }
@@ -571,13 +573,13 @@ namespace CardLinkScheduler.Services
         public int GetOperatorWeight(string op)
         {
             int weight = -1;
-            if (op == "&&" || op == "||" || op == "in")
+            if (op == "&&" || op == "||" )
                 weight = 1;
 
             if (op == "==" || op == "!=")
                 weight = 2;
 
-            if (op == "<" || op == ">" || op == "<=" || op == ">=")
+            if (op == "<" || op == ">" || op == "<=" || op == ">=" || op == "in")
                 weight = 3;
             if (op == "+" || op == "-")
                 weight = 4;
