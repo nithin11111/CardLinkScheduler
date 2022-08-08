@@ -7,6 +7,7 @@ namespace CardLinkScheduler.DTOs
 {
     public class TransactionDetailResponse
     {
+        public Guid Id { get; set; }
         public TransactionDetail TransactionDetails { get; set; }
         public Guid TenantId { get; set; }
         public string BankName { get; set; }

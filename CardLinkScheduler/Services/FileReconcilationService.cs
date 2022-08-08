@@ -95,7 +95,7 @@ namespace CardLinkScheduler.Services
                             merchantofferrules = merchantofferrules.ToLower().Replace("offer_availability", "both,offline");
                         }
 
-                        if (merchantofferrules.ToLower().Contains("end_date") && rulesList.Where(t => t.ruleField.ToLower() == "end_date" && t.bankTransactionField.Where(t => t.name.ToLower() == "end_date").Count() > 0).Count() > 0)
+                        if (merchantofferrules.ToLower().Contains("end_date") && rulesList.Where(t => t.ruleField.ToLower() == "end date" && t.bankTransactionField.Where(t => t.name.ToLower() == "end_date").Count() > 0).Count() > 0)
                         {
                             //ToDO:transaction value hardcoded
                             merchantofferrules = merchantofferrules.ToLower().Replace("end_date", Convert.ToDateTime(item.TransactionDetails.LOCAL_DATE).ToString("yyyy-MM-dd"));
@@ -116,19 +116,22 @@ namespace CardLinkScheduler.Services
                             //ToDO:transaction value hardcoded
                             merchantofferrules = merchantofferrules.ToLower().Replace("offer_status", "published".ToLower());
                         }
-                        //merchantofferrules = "500;>=;6777;&&;85;<=;4567;&&;offline;in;online,offline;&&;bom;in;all;&&;22-06-2022 17:51:31;<=;2022-01-31;&&;22-06-2022 17:52:09;>=;2022-01-31;&&;22-06-2022 17:52:14;<=;2022-01-31;&&;published;==;published";
+                        //merchantofferrules = "500;>=;6777";
 
                         string po = InfixToPostfix(merchantofferrules);
+                        // merchantofferrules = "500;6777;>=";
+
                         bool offerValid = ValidateRules(po);
                         if (offerValid)
                         {
                             OfferTransactionInitiationRequest otir = new OfferTransactionInitiationRequest
                             {
+                                id = item.Id,
                                 offer_id = (Guid)mol.id,
                                 offer_transaction_details = new offerTransactiondetails
                                 {
-                                    discount_amount = discountAmount,
-                                    cheg_comission_amount = String.Format("{0:0.00}", Convert.ToDecimal(discountAmount) * Convert.ToDecimal(mol.business_details.commission)/100),
+                                    discount_amount = offerValid ? discountAmount : "0",
+                                    cheg_comission_amount = offerValid ? String.Format("{0:0.00}", Convert.ToDecimal(discountAmount) * Convert.ToDecimal(mol.business_details.commission) / 100) : "0",
                                     original_amount = item.TransactionDetails.AMOUNT,
                                     Cheg_commission = mol.business_details.commission,
                                     merchantId = item.TransactionDetails.Merchant_ID,
@@ -142,7 +145,7 @@ namespace CardLinkScheduler.Services
                                     terminal_id = item.TransactionDetails.TERMID
                                 },
                                 tenant_id = item.TenantId,
-                                status = "pending",
+                                status = offerValid ? "pending" : "rejected",
                                 bankName = item.BankName
                             };
                             transactionList.Add(otir);
@@ -324,7 +327,7 @@ namespace CardLinkScheduler.Services
         //    }
 
         public bool ValidateRules(string s)
-        {
+        { 
             int a, b;
             bool ans = false;
             Stack i = new Stack();

@@ -7,6 +7,7 @@ namespace CardLinkScheduler.DTOs
 {
     public sealed class OfferTransactionInitiationRequest
     {
+        public Guid id { get; set; }
         public Guid offer_id { get; set; }
         public Guid tenant_id { get; set; }
         public offerTransactiondetails offer_transaction_details { get; set; }

@@ -7,7 +7,7 @@ namespace CardLinkScheduler.Interface
 {
     public interface ITransactionFileService
     {
-        Task<string> UploadFileToCardlinkDB();
-        string getvirtualid();
+        Task UploadFileToCardlinkDB();
+        //string getvirtualid();
     }
 }

@@ -23,11 +23,11 @@ namespace CardLinkScheduler
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCronJob<MerchantFileCronJobService>(c =>
-            {
-                c.TimeZoneInfo = TimeZoneInfo.Local;
-                c.CronExpression = @"*/5 * * * *";
-            });
+            //services.AddCronJob<MerchantFileCronJobService>(c =>
+            //{
+            //    c.TimeZoneInfo = TimeZoneInfo.Local;
+            //    c.CronExpression = @"*/5 * * * *";
+            //});
             services.AddCronJob<TransactionFileCronJobService>(c =>
             {
                 c.TimeZoneInfo = TimeZoneInfo.Local;

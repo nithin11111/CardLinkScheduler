@@ -29,6 +29,7 @@ namespace CardLinkScheduler.Helpers
         public string BankIP { get; set; }
         public string BankUserName { get; set; }
         public string BankPassword { get; set; }
+        public string BankAPiUrl { get; set; }
        // public string Outbox { get; set; }
     }
 
