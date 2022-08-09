@@ -45,7 +45,6 @@ namespace CardLinkScheduler.Services
                         merchant_id = merchantList.Select(t => t.merchant_id).ToList(),
                         merchantName = merchantList.Select(t => t.merchant_name).ToList(),
                     };
-                    merchantRequests.merchantName.Add("RummytimeTechnologies");
                     result = await GetTransactionFile(merchantRequests);
                 }
                 if (result.Count() > 0)
